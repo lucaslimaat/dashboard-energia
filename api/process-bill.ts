@@ -1,6 +1,6 @@
 import { GoogleGenAI, Type, Part } from "@google/genai";
 import { createClient, User } from '@supabase/supabase-js';
-import type { Handler, HandlerEvent, HandlerContext } from "@netlify/functions";
+import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 // --- TYPE DEFINITIONS (Copied from frontend for consistency) ---
 export type Json =
@@ -62,30 +62,41 @@ const responseSchema = {
     }
 };
 
-const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
-    if (event.httpMethod !== 'POST') {
-        return { statusCode: 405, body: JSON.stringify({ error: 'Method Not Allowed' }) };
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+    if (req.method !== 'POST') {
+        return res.status(405).json({ error: 'Method Not Allowed' });
     }
 
     // --- Check for Environment Variables ---
     const { API_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY } = process.env;
     if (!API_KEY) {
-        return { statusCode: 500, body: JSON.stringify({ error: 'A chave da API do Gemini não está configurada.' }) };
+        return res.status(500).json({ error: 'A chave da API do Gemini não está configurada.' });
     }
     if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
-        return { statusCode: 500, body: JSON.stringify({ error: 'As credenciais do Supabase não estão configuradas.' }) };
+        return res.status(500).json({ error: 'As credenciais do Supabase não estão configuradas.' });
     }
     
     // --- Check for User Authentication ---
-    const { user } = context.clientContext || {};
-    if (!user) {
-        return { statusCode: 401, body: JSON.stringify({ error: 'Acesso não autorizado. Por favor, faça login.' }) };
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Acesso não autorizado. Nenhum token fornecido.' });
     }
+    const token = authHeader.split(' ')[1];
 
     try {
-        const { files } = JSON.parse(event.body || '{}');
+        // Vercel automatically parses the JSON body
+        const { files } = req.body;
         if (!files || !Array.isArray(files) || files.length === 0) {
-            return { statusCode: 400, body: JSON.stringify({ error: 'Nenhum arquivo foi enviado.' }) };
+            return res.status(400).json({ error: 'Nenhum arquivo foi enviado.' });
+        }
+        
+        // Use the SERVICE_KEY for the Supabase admin client
+        const supabaseAdmin = createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+        // Authenticate the user with the provided token
+        const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
+
+        if (userError || !user) {
+            return res.status(401).json({ error: 'Token inválido ou expirado. Por favor, faça login novamente.' });
         }
 
         // --- Step 1: Call Gemini API ---
@@ -104,8 +115,6 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         const extractedData: Partial<GeminiBillData>[] = JSON.parse(geminiResponse.text);
 
         // --- Step 2: Save to Supabase ---
-        const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_KEY);
-        
         let addedCount = 0;
         let duplicateCount = 0;
         let ignoredCount = 0;
@@ -117,7 +126,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
             }
 
             const newBillForDb: Database['public']['Tables']['energy_bills']['Insert'] = {
-                user_id: user.sub, // user.sub contains the user's UUID
+                user_id: user.id, // user.id from the authenticated user
                 company: billData.company || "Não identificado",
                 installation_number: billData.installationNumber,
                 bill_class: billData.billClass || "N/A",
@@ -130,7 +139,7 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
                 generation_balance_kwh: billData.generationBalanceKwh || 0,
             };
 
-            const { error } = await supabase.from('energy_bills').insert(newBillForDb);
+            const { error } = await supabaseAdmin.from('energy_bills').insert(newBillForDb);
             if (error) {
                 if (error.code === '23505') { // unique_violation
                     duplicateCount++;
@@ -148,19 +157,10 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
         if (duplicateCount > 0) message += `${duplicateCount} conta(s) duplicada(s) ignorada(s).\n`;
         if (ignoredCount > 0) message += `${ignoredCount} conta(s) ignorada(s) por falta de dados.\n`;
 
-        return {
-            statusCode: 200,
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message: message.trim() || "Nenhuma conta nova para adicionar." }),
-        };
+        return res.status(200).json({ message: message.trim() || "Nenhuma conta nova para adicionar." });
 
     } catch (error: any) {
-        console.error("Erro na função Netlify 'process-bill':", error);
-        return {
-            statusCode: 500,
-            body: JSON.stringify({ error: error.message || 'Ocorreu um erro interno no servidor.' }),
-        };
+        console.error("Erro na função Vercel 'process-bill':", error);
+        return res.status(500).json({ error: error.message || 'Ocorreu um erro interno no servidor.' });
     }
-};
-
-export { handler };
+}

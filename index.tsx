@@ -72,7 +72,7 @@ export type Database = {
           paid?: boolean
           compensated_energy_type?: 'INTERNA' | 'EXTERNA'
         }
-        Relationships: [never]
+        Relationships: []
       }
     }
     Views: {}
