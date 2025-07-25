@@ -1,11 +1,19 @@
 {
-  "name": "energy-dashboard-functions",
+  "name": "energy-dashboard",
   "version": "1.0.0",
-  "description": "Netlify functions for the energy dashboard",
   "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
   "dependencies": {
     "@google/genai": "^1.10.0",
     "@netlify/functions": "^2.6.0",
     "@supabase/supabase-js": "^2.44.4"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "typescript": "^5.5.3",
+    "vite": "^5.3.3"
   }
 }

@@ -18,6 +18,7 @@ export type Database = {
         Row: { id: number; user_id: string; company: string; installation_number: string; bill_class: string; date: string; due_date: string | null; cost: number; consumption: number; compensated_energy_kwh: number; unit_price: number; generation_balance_kwh: number; contracted_discount: number | null; paid: boolean; compensated_energy_type: 'INTERNA' | 'EXTERNA' }
         Insert: { id?: number; user_id: string; company: string; installation_number: string; bill_class: string; date: string; due_date?: string | null; cost: number; consumption: number; compensated_energy_kwh: number; unit_price: number; generation_balance_kwh: number; contracted_discount?: number | null; paid?: boolean; compensated_energy_type?: 'INTERNA' | 'EXTERNA' }
         Update: { id?: number; user_id?: string; company?: string; installation_number?: string; bill_class?: string; date?: string; due_date?: string | null; cost?: number; consumption?: number; compensated_energy_kwh?: number; unit_price?: number; generation_balance_kwh?: number; contracted_discount?: number | null; paid?: boolean; compensated_energy_type?: 'INTERNA' | 'EXTERNA' }
+        Relationships: [never]
       }
     }
     Views: {}
