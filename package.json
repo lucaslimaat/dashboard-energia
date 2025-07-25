@@ -1,0 +1,10 @@
+{
+  "name": "energy-dashboard-functions",
+  "version": "1.0.0",
+  "description": "Netlify functions for the energy dashboard",
+  "private": true,
+  "dependencies": {
+    "@google/genai": "^1.10.0",
+    "@netlify/functions": "^2.6.0"
+  }
+}
