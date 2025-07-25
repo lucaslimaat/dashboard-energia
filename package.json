@@ -5,6 +5,7 @@
   "private": true,
   "dependencies": {
     "@google/genai": "^1.10.0",
-    "@netlify/functions": "^2.6.0"
+    "@netlify/functions": "^2.6.0",
+    "@supabase/supabase-js": "^2.44.4"
   }
 }
