@@ -6,7 +6,17 @@ import { createClient, Session, User } from '@supabase/supabase-js';
 
 // --- TYPE DEFINITIONS ---
 
+// This is a generic type for Supabase JSON columns, good practice to have.
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
+
 // Define types for Supabase client to fix type errors
+// Corrected to use the standard empty type format for Views, Functions, etc.
 export type Database = {
   public: {
     Tables: {
@@ -65,10 +75,18 @@ export type Database = {
         Relationships: []
       }
     }
-    Views: {}
-    Functions: {}
-    Enums: {}
-    CompositeTypes: {}
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
 }
 
